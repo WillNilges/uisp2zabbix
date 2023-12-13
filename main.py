@@ -17,8 +17,8 @@ def main():
         series = ("classic", "G60", "LTU")
 
         # Filter results
-        if l["type"] != "wireless":
-            continue
+        #if l["type"] != "wireless":
+        #    continue
 
 #        if l["from"]["device"]["identification"]["type"] not in devices and l["to"]["device"]["identification"]["type"] not in devices:
 #            continue

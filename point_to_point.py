@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 
-class PointToPoint():
+class PointToPoint:
     ssid: str
     from_tx_rate: int
     from_rx_rate: int
@@ -23,12 +23,13 @@ class PointToPoint():
         self.to_signal_local = to_stats.signalLocal
         self.to_signal_remote = to_stats.signalRemote
 
+
 @dataclass
 class Statistics:
     rxRate: int
-    txRate: int 
+    txRate: int
     downlinkCapacity: int
-    uplinkCapacity: int 
+    uplinkCapacity: int
     downlinkUtilization: float
     uplinkUtilization: float
     signalLocal: int

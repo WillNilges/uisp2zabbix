@@ -43,7 +43,7 @@ class ZabbixClient:
         # Set up template group and template
         self.template_group_id = self.get_or_create_template_group()
         # FIXME: Just p2p for now, but how about in the future?
-        self.template_name = f"Point to Point by UISP2Zabbix" 
+        self.template_name = f"Point to Point by UISP2Zabbix"
         self.template_id = self.get_or_create_template()
 
     @staticmethod
@@ -117,17 +117,19 @@ class ZabbixClient:
 
                 # Create trapper item
                 item_params = {
-                    'name': name,
-                    'key_': key,
-                    'type': TRAPPER,
-                    'value_type': info_type,
-                    'hostid': self.template_id,
-                    'units': unit,
+                    "name": name,
+                    "key_": key,
+                    "type": TRAPPER,
+                    "value_type": info_type,
+                    "hostid": self.template_id,
+                    "units": unit,
                 }
 
                 try:
-                    item_id = self.zapi.item.create(params=item_params)['itemids'][0]
-                    print(f"Trapper item '{name}' created successfully with item ID {item_id}")
+                    item_id = self.zapi.item.create(params=item_params)["itemids"][0]
+                    print(
+                        f"Trapper item '{name}' created successfully with item ID {item_id}"
+                    )
                 except Exception as e:
                     print(f"Failed to create trapper item: {e}")
 

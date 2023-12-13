@@ -9,7 +9,8 @@ from pyzabbix.api import ZabbixAPIException
 SNMP_AGENT = 20
 TRAPPER = 2
 
-TEMPLATE_GROUP = "Templates/UISP2ZABBIX"
+TEMPLATE_GROUP = "Templates/UISP2Zabbix"
+HOST_GROUP = "UISP2Zabbix"
 
 """
 Zabbix value_types
@@ -41,7 +42,8 @@ class ZabbixClient:
         self._finalizer = weakref.finalize(self, self._cleanup_conn, self.zapi)
 
         # Set up template group and template
-        self.template_group_id = self.get_or_create_template_group()
+        #self.template_group_id = self.get_or_create_template_group()
+        self.host_group_id = self.get_or_create_host_group()
         # FIXME: Just p2p for now, but how about in the future?
         self.template_name = f"Point to Point by UISP2Zabbix"
         self.template_id = self.get_or_create_template()
@@ -50,6 +52,7 @@ class ZabbixClient:
     def _cleanup_conn(zapi):
         zapi.user.logout()
 
+    # FIXME: Template stuff isn't relevant this very second
     # Searches for M2ZA template group. Creates it if it doesn't already exist
     def get_or_create_template_group(self):
         try:
@@ -73,7 +76,7 @@ class ZabbixClient:
             print(f"Error creating template group: {e}")
             return None
 
-    # Returns template_id for given MIB, creates if it doesn't already exist
+    # Returns template_id, creates if it doesn't already exist
     def get_or_create_template(self):
         try:
             template = self.zapi.template.get(filter={"name": self.template_name})
@@ -98,6 +101,7 @@ class ZabbixClient:
             print(f"Error getting template: {e}")
             return None
 
+    # Creates an item in a template
     def get_or_create_item(self, name, key, info_type, unit):
         print(key)
 
@@ -136,3 +140,47 @@ class ZabbixClient:
         except ZabbixAPIException as e:
             print(f"Error: {e}")
             return None
+
+    def get_or_create_host(self, host_name):
+        # TODO: Create a cache so we don't have to bother Zabbix so much
+
+        # Check if the host already exists
+        existing_host = self.zapi.host.get(filter={"host": host_name})
+
+        if existing_host:
+            # Host already exists, return its ID
+            host_id = existing_host[0]['hostid']
+            print(f"Host '{host_name}' already exists with ID {host_id}")
+        else:
+            # Host doesn't exist, create it
+            host_create_params = {
+                "host": host_name,
+                "name": host_name,
+                "groups": [{"groupid": self.host_group_id}],
+                "templates": [{"templateid": self.template_id}],
+            }
+
+            host_info = self.zapi.host.create(host_create_params)
+            host_id = host_info['hostids'][0]
+            print(f"Host '{host_name}' created with ID {host_id}")
+
+        return host_id
+
+    def get_or_create_host_group(self):
+        # Check if the host group already exists
+        existing_group = self.zapi.hostgroup.get(filter={"name": HOST_GROUP})
+
+        if existing_group:
+            # Host group already exists, return its ID
+            group_id = existing_group[0]['groupid']
+            print(f"Host group '{HOST_GROUP}' already exists with ID {group_id}")
+        else:
+            # Host group doesn't exist, create it
+            group_create_params = {"name": HOST_GROUP}
+            group_info = self.zapi.hostgroup.create(group_create_params)
+            group_id = group_info['groupids'][0]
+            print(f"Host group '{HOST_GROUP}' created with ID {group_id}")
+
+        self.host_group_id = group_id
+        return group_id
+

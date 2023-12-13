@@ -12,33 +12,45 @@ from zappix.protocol import SenderData
 def main():
     load_dotenv()
     uisp = UISPClient()
-    # zapi = ZabbixClient()
+    zapi = ZabbixClient()
     z_endpoint = os.getenv("ZABBIX_ENDPOINT")
     if not z_endpoint:
         raise ValueError("Must provide Zabbix endpoint")
     z_sender = Sender(z_endpoint)
 
-    z_payload = []
-    for l in uisp.get_data_links():
-        # TODO: For now, this software is only interested in Point to Point links
-        wireless_modes = ("ap-ptp", "sta-ptp")
-        if (
-            l["from"]["device"]["overview"]["wirelessMode"] not in wireless_modes
-            or l["to"]["device"]["overview"]["wirelessMode"] not in wireless_modes
-        ):
-            continue
+    while True:
+        z_payload = []
+        for l in uisp.get_data_links():
+            # TODO: For now, this software is only interested in Point to Point links
+            wireless_modes = ("ap-ptp", "sta-ptp")
+            if (
+                l["from"]["device"]["overview"]["wirelessMode"] not in wireless_modes
+                or l["to"]["device"]["overview"]["wirelessMode"] not in wireless_modes
+            ):
+                continue
 
-        print(l["ssid"])
+            #print(l["ssid"])
 
-        from_stats = Statistics(**l["from"]["interface"]["statistics"])
-        to_stats = Statistics(**l["to"]["interface"]["statistics"])
-        p2p = PointToPoint(l["ssid"], from_stats, to_stats)
+            # If the SSID doesn't exist, bail.
+            if l["ssid"] is None:
+                continue
 
-        payload = json.loads(json.dumps(p2p.__dict__))
-        for k, v in payload.items():
-            z_payload.append(SenderData(l["ssid"], f"uisp2zabbix.p2p.{k}", v))
-        break
-    z_sender.send_bulk(z_payload, with_timestamps=True)
+            host_name = l["ssid"].strip()
+
+            from_stats = Statistics(**l["from"]["interface"]["statistics"])
+            to_stats = Statistics(**l["to"]["interface"]["statistics"])
+            p2p = PointToPoint(host_name, from_stats, to_stats)
+
+            # Create the host if it doesn't already exist
+            zapi.get_or_create_host(p2p.ssid)
+
+            payload = json.loads(json.dumps(p2p.__dict__))
+            for k, v in payload.items():
+                z_payload.append(SenderData(p2p.ssid, f"uisp2zabbix.p2p.{k}", v))
+        z_sender.send_bulk(z_payload, with_timestamps=True)
+        sleep_duration = os.getenv("SLEEP_DURATION", default=10)
+        print(f"Sleeping for {sleep_duration}s...")
+        time.sleep(int(sleep_duration))
 
 
 if __name__ == "__main__":

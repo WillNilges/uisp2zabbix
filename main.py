@@ -9,8 +9,10 @@ from zabbix_client import ZabbixClient
 from zappix.sender import Sender
 from zappix.protocol import SenderData
 
+if not os.path.exists("./log"):
+    os.mkdir("./log")
 
-logging.basicConfig(filename='uisp2zabbix.log', encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename='./log/uisp2zabbix.log', encoding='utf-8', level=logging.INFO)
 log = logging.getLogger("UISP2Zabbix")
 
 def main():

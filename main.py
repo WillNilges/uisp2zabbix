@@ -1,6 +1,7 @@
 import time
 import json
 from dotenv import load_dotenv
+from point_to_point import PointToPoint, Statistics
 from uisp_client import UISPClient
 
 
@@ -26,7 +27,14 @@ def main():
         if l["from"]["device"]["overview"]["wirelessMode"] not in wireless_modes or l["to"]["device"]["overview"]["wirelessMode"] not in wireless_modes:
             continue
 
-        print(l["ssid"])
+        #print(l["ssid"])
+        #print(json.dumps(l, indent=2))
+
+        from_stats = Statistics(**l["from"]["interface"]["statistics"])
+        to_stats = Statistics(**l["to"]["interface"]["statistics"])
+        p2p = PointToPoint(l["ssid"], from_stats, to_stats)
+
+        print(p2p.__dict__)
 
 if __name__ == "__main__":
     main()

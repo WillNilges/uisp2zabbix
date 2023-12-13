@@ -47,6 +47,7 @@ class ZabbixClient:
         # FIXME: Just p2p for now, but how about in the future?
         self.template_name = f"Point to Point by UISP2Zabbix"
         self.template_id = self.get_or_create_template()
+        self.host_cache = {}
 
     @staticmethod
     def _cleanup_conn(zapi):
@@ -143,6 +144,8 @@ class ZabbixClient:
 
     def get_or_create_host(self, host_name):
         # TODO: Create a cache so we don't have to bother Zabbix so much
+        if host_name in self.host_cache.keys():
+            return self.host_cache[host_name]
 
         # Check if the host already exists
         existing_host = self.zapi.host.get(filter={"host": host_name})
@@ -164,6 +167,7 @@ class ZabbixClient:
             host_id = host_info['hostids'][0]
             print(f"Host '{host_name}' created with ID {host_id}")
 
+        self.host_cache[host_name] = host_id
         return host_id
 
     def get_or_create_host_group(self):

@@ -1,6 +1,6 @@
-from pysmi.compiler import os
-from pysmi.debug import logging
 from pyzabbix import ZabbixAPI
+import os
+import logging
 import weakref
 from enum import Enum
 
@@ -26,8 +26,8 @@ NUMERIC_UNSIGNED = 3
 TEXT = 4
 
 
-class M2ZAZabbix:
-    def __init__(self, mib_name):
+class ZabbixClient:
+    def __init__(self):
         zabbix_url = os.getenv("ZABBIX_URL")
         zabbix_uname = os.getenv("ZABBIX_UNAME")
         zabbix_pword = os.getenv("ZABBIX_PWORD")
@@ -42,7 +42,8 @@ class M2ZAZabbix:
 
         # Set up template group and template
         self.template_group_id = self.get_or_create_template_group()
-        self.template_name = f"{mib_name} by M2ZA"
+        # FIXME: Just p2p for now, but how about in the future?
+        self.template_name = f"Point to Point by UISP2Zabbix" 
         self.template_id = self.get_or_create_template()
 
     @staticmethod
@@ -97,10 +98,6 @@ class M2ZAZabbix:
             print(f"Error getting template: {e}")
             return None
 
-    # Searches for item that describes SNMP Agent item, creates if it doesn't
-    # already exist
-    # input: item M2ZAMibItem
-    # output: item_id int
     def get_or_create_item(self, name, key, info_type, unit):
         print(key)
 

@@ -40,11 +40,10 @@ def main():
         to_stats = Statistics(**l["to"]["interface"]["statistics"])
         p2p = PointToPoint(l["ssid"], from_stats, to_stats)
 
-        payload = json.dumps(p2p.__dict__)
-        
-        print(payload)
+        payload = json.loads(json.dumps(p2p.__dict__))
+        for k, v in payload.items():
+            z_sender.send_value(l["ssid"], f"uisp2zabbix.p2p.{k}", v)
 
-        z_sender.send_value(l["ssid"], "uisp2zabbix.p2p.payload", payload)
         return
 
 

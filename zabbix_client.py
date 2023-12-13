@@ -26,6 +26,7 @@ LOG = 2
 NUMERIC_UNSIGNED = 3
 TEXT = 4
 
+log = logging.getLogger("ZabbixClient")
 
 class ZabbixClient:
     def __init__(self):
@@ -33,12 +34,12 @@ class ZabbixClient:
         zabbix_uname = os.getenv("ZABBIX_UNAME")
         zabbix_pword = os.getenv("ZABBIX_PWORD")
         if zabbix_url is None or zabbix_uname is None or zabbix_pword is None:
-            logging.exception(f"Zabbix credentials not provided")
+            log.exception(f"Zabbix credentials not provided")
             raise ValueError("Zabbix credentials not provided.")
-        logging.info("Logging into zabbix...")
+        log.info("Logging into zabbix...")
         self.zapi = ZabbixAPI(zabbix_url)
         self.zapi.login(zabbix_uname, zabbix_pword)
-        logging.info(f"Logged into zabbix @ {zabbix_url}")
+        log.info(f"Logged into zabbix @ {zabbix_url}")
         self._finalizer = weakref.finalize(self, self._cleanup_conn, self.zapi)
 
         # Set up template group and template
@@ -63,18 +64,18 @@ class ZabbixClient:
             )
 
             if existing_groups:
-                logging.exception(f"Template group '{TEMPLATE_GROUP}' already exists.")
+                log.exception(f"Template group '{TEMPLATE_GROUP}' already exists.")
                 return existing_groups[0]["groupid"]
 
             # Create the template group if it doesn't exist
             created_group = self.zapi.templategroup.create(name=TEMPLATE_GROUP)
-            logging.info(
+            log.info(
                 f"Template group '{TEMPLATE_GROUP}' created with ID: {created_group['groupids'][0]}"
             )
             self.template_group_id = created_group["groupids"][0]
             return created_group["groupids"][0]
         except ZabbixAPIException as e:
-            logging.exception(f"Error creating template group: {e}")
+            log.exception(f"Error creating template group: {e}")
             return None
 
     # Returns template_id, creates if it doesn't already exist
@@ -91,20 +92,20 @@ class ZabbixClient:
                             "groups": [{"groupid": self.template_group_id}],
                         }
                     )
-                    logging.info(
+                    log.info(
                         f"Template '{self.template_name}' created with ID {template['templateids'][0]}"
                     )
                     return template["templateids"][0]
                 except ZabbixAPIException as e:
-                    logging.exception(f"Error creating template: {e}")
+                    log.exception(f"Error creating template: {e}")
                     return None
         except ZabbixAPIException as e:
-            logging.exception(f"Error getting template: {e}")
+            log.exception(f"Error getting template: {e}")
             return None
 
     # Creates an item in a template
     def get_or_create_item(self, name, key, info_type, unit):
-        logging.info(f"Creating {key}")
+        log.info(f"Creating {key}")
 
         try:
             item = self.zapi.item.get(
@@ -113,12 +114,12 @@ class ZabbixClient:
 
             if item:
                 item_info = item[0]
-                logging.info(
+                log.info(
                     f"Item found: {item_info['name']} (Item ID: {item_info['itemid']}, Key: {item_info['key_']})"
                 )
                 return item_info["itemid"]
             else:
-                logging.info(f"Item with key '{key}' not found.")
+                log.info(f"Item with key '{key}' not found.")
 
                 # Create trapper item
                 item_params = {
@@ -132,14 +133,14 @@ class ZabbixClient:
 
                 try:
                     item_id = self.zapi.item.create(params=item_params)["itemids"][0]
-                    logging.info(
+                    log.info(
                         f"Trapper item '{name}' created successfully with item ID {item_id}"
                     )
                 except Exception as e:
-                    logging.exception(f"Failed to create trapper item: {e}")
+                    log.exception(f"Failed to create trapper item: {e}")
 
         except ZabbixAPIException as e:
-            logging.exception(f"Error: {e}")
+            log.exception(f"Error: {e}")
             return None
 
     def get_or_create_host_group(self):
@@ -149,13 +150,13 @@ class ZabbixClient:
         if existing_group:
             # Host group already exists, return its ID
             group_id = existing_group[0]["groupid"]
-            logging.info(f"Host group '{HOST_GROUP}' already exists with ID {group_id}")
+            log.info(f"Host group '{HOST_GROUP}' already exists with ID {group_id}")
         else:
             # Host group doesn't exist, create it
             group_create_params = {"name": HOST_GROUP}
             group_info = self.zapi.hostgroup.create(group_create_params)
             group_id = group_info["groupids"][0]
-            logging.info(f"Host group '{HOST_GROUP}' created with ID {group_id}")
+            log.info(f"Host group '{HOST_GROUP}' created with ID {group_id}")
 
         self.host_group_id = group_id
         return group_id
@@ -164,7 +165,7 @@ class ZabbixClient:
         # Check our cache for the host
         if host_name in self.host_cache.keys():
             host_id = self.host_cache[host_name]
-            logging.info(f"Found Host '{host_name}' with ID {host_id} in cache")
+            log.info(f"Found Host '{host_name}' with ID {host_id} in cache")
             return host_id
 
         # Check if the host already exists
@@ -173,7 +174,7 @@ class ZabbixClient:
         if existing_host:
             # Host already exists, return its ID
             host_id = existing_host[0]["hostid"]
-            logging.info(f"Host '{host_name}' already exists with ID {host_id}")
+            log.info(f"Host '{host_name}' already exists with ID {host_id}")
         else:
             # Host doesn't exist, create it
             host_create_params = {
@@ -185,7 +186,7 @@ class ZabbixClient:
 
             host_info = self.zapi.host.create(host_create_params)
             host_id = host_info["hostids"][0]
-            logging.info(f"Host '{host_name}' created with ID {host_id}")
+            log.info(f"Host '{host_name}' created with ID {host_id}")
 
         self.host_cache[host_name] = host_id
         return host_id

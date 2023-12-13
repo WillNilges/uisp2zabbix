@@ -10,6 +10,9 @@ from zappix.sender import Sender
 from zappix.protocol import SenderData
 
 
+logging.basicConfig(filename='uisp2zabbix.log', encoding='utf-8', level=logging.INFO)
+log = logging.getLogger("UISP2Zabbix")
+
 def main():
     load_dotenv()
     uisp = UISPClient()
@@ -51,14 +54,15 @@ def main():
                 for k, v in payload.items():
                     z_payload.append(SenderData(p2p.ssid, f"uisp2zabbix.p2p.{k}", v))
             except Exception as e:
-                logging.exception(f"Got exception processing UISP payload: {e}")
+                log.exception(f"Got exception processing UISP payload: {e}")
 
         # Send collected payloads to Zabbix
+        log.info("Sending collected metrics to Zabbix...")
         z_sender.send_bulk(z_payload, with_timestamps=True)
 
         # Sleep until it's time to gather more data
         sleep_duration = os.getenv("SLEEP_DURATION", default=10)
-        logging.info(f"Sleeping for {sleep_duration}s...")
+        log.info(f"Sleeping for {sleep_duration}s...")
         time.sleep(int(sleep_duration))
 
 

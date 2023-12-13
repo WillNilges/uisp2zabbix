@@ -1,13 +1,19 @@
+import os
 import time
 import json
 from dotenv import load_dotenv
 from point_to_point import PointToPoint, Statistics
 from uisp_client import UISPClient
+from zappix.sender import Sender
 
 
 def main():
     load_dotenv()
     uisp = UISPClient()
+    z_endpoint = os.getenv("ZABBIX_ENDPOINT")
+    if not z_endpoint:
+        raise ValueError("Must provide Zabbix endpoint")
+    z_sender = Sender(z_endpoint)
     for l in uisp.get_data_links():
 
         # For now, this software is only interested in Point to Point links,
@@ -34,7 +40,13 @@ def main():
         to_stats = Statistics(**l["to"]["interface"]["statistics"])
         p2p = PointToPoint(l["ssid"], from_stats, to_stats)
 
-        print(p2p.__dict__)
+        payload = json.dumps(p2p.__dict__)
+        
+        print(payload)
+
+        z_sender.send_value(l["ssid"], "uisp2zabbix.p2p.payload", payload)
+        return
+
 
 if __name__ == "__main__":
     main()

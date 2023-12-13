@@ -12,8 +12,11 @@ from zappix.protocol import SenderData
 if not os.path.exists("./log"):
     os.mkdir("./log")
 
-logging.basicConfig(filename='./log/uisp2zabbix.log', encoding='utf-8', level=logging.INFO)
+logging.basicConfig(
+    filename="./log/uisp2zabbix.log", encoding="utf-8", level=logging.INFO
+)
 log = logging.getLogger("UISP2Zabbix")
+
 
 def main():
     load_dotenv()
@@ -26,6 +29,7 @@ def main():
 
     while True:
         z_payload = []
+        logging.info("Querying UISP for Data Link info...")
         for l in uisp.get_data_links():
             try:
                 # TODO: For now, this software is only interested in Point to Point links

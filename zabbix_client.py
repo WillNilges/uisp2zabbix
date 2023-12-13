@@ -28,6 +28,7 @@ TEXT = 4
 
 log = logging.getLogger("UISP2Zabbix")
 
+
 class ZabbixClient:
     def __init__(self):
         zabbix_url = os.getenv("ZABBIX_URL")

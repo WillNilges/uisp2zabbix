@@ -26,7 +26,7 @@ LOG = 2
 NUMERIC_UNSIGNED = 3
 TEXT = 4
 
-log = logging.getLogger("ZabbixClient")
+log = logging.getLogger("UISP2Zabbix")
 
 class ZabbixClient:
     def __init__(self):

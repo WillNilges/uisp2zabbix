@@ -1,0 +1,14 @@
+version: '3'
+services:
+  uisp2zabbix:
+    restart: always
+    image: docker.io/willnilges/uisp2zabbix:main
+    networks:
+      - uisp2zabbix
+    env_file:
+      - .env
+    volumes:
+      - ./log:/opt/uisp2zabbix/log
+
+networks:
+  uisp2zabbix:

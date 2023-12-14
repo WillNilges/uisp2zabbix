@@ -68,6 +68,7 @@ def main():
         while attempts_left > 0:
             try:
                 z_sender.send_bulk(z_payload, with_timestamps=True)
+                break
             except Exception as e:
                 attempts_left -= 1
                 logging.exception(e)

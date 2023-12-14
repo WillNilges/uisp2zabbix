@@ -64,7 +64,15 @@ def main():
 
         # Send collected payloads to Zabbix
         log.info("Sending collected metrics to Zabbix...")
-        z_sender.send_bulk(z_payload, with_timestamps=True)
+        attempts_left = 2
+        while attempts_left > 0:
+            try:
+                z_sender.send_bulk(z_payload, with_timestamps=True)
+            except Exception as e:
+                attempts_left -= 1
+                logging.exception(e)
+                logging.error("Sleeping for 3 seconds and trying again.")
+                time.sleep(3)
 
         # Sleep until it's time to gather more data
         sleep_duration = os.getenv("SLEEP_DURATION", default=10)

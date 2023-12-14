@@ -4,3 +4,4 @@ python-dotenv
 zappix
 pyzabbix
 black
+argparse

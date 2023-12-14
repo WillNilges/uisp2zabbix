@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import logging
 import os
 import time
@@ -19,8 +20,26 @@ log = logging.getLogger("UISP2Zabbix")
 
 
 def main():
+
+    parser = ArgumentParser(
+        description="A broker for forwarding UISP device statistics to Zabbix."
+    )
+
+    parser.add_argument(
+        "--dump",
+        action="store_true",
+        help="Dump one frame of UISP data to stdout and exit",
+    )
+
+    args = parser.parse_args()
+
     load_dotenv()
     uisp = UISPClient()
+
+    if args.dump:
+        print(json.dumps(uisp.get_data_links(), indent=2))
+        return
+
     zapi = ZabbixClient()
     z_endpoint = os.getenv("ZABBIX_ENDPOINT")
     if not z_endpoint:

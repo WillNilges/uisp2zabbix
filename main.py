@@ -38,7 +38,13 @@ def main():
         print(json.dumps(uisp.get_data_links(filter=True), indent=2))
         return
 
+    # For talking to the Zabbix API. Also creates Default Template Group and 
+    # Default Host Group
     zapi = ZabbixClient()
+    # Set up template for DataLinks (if needed)
+    datalink_template_id = zapi.get_or_create_template(DataLink.__name__)
+
+    # For pushing data to Zabbix (doing the actual broker-ing)
     z_endpoint = os.getenv("ZABBIX_ENDPOINT")
     if not z_endpoint:
         raise ValueError("Must provide Zabbix endpoint")
@@ -56,7 +62,7 @@ def main():
                 )
 
                 # Create the host if it doesn't already exist
-                zapi.get_or_create_host(p2p.ssid)
+                zapi.get_or_create_host(p2p.ssid, datalink_template_id)
 
                 for k, v in p2p.stats().items():
                     z_payload.append(SenderData(p2p.ssid, f"uisp2zabbix.p2p.{k}", v))

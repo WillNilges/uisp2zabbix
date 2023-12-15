@@ -4,7 +4,7 @@ import os
 import time
 import json
 from dotenv import load_dotenv
-from point_to_point import PointToPoint, Statistics
+from point_to_point import DataLinkStatistics, DataLink
 from uisp_client import UISPClient
 from zabbix_client import ZabbixClient
 from zappix.sender import Sender
@@ -14,13 +14,11 @@ if not os.path.exists("./log"):
     os.mkdir("./log")
 
 logging.basicConfig(
-    filename="./log/uisp2zabbix.log", encoding="utf-8", level=logging.INFO
+    encoding="utf-8", level=logging.INFO
 )
 log = logging.getLogger("UISP2Zabbix")
 
-
 def main():
-
     parser = ArgumentParser(
         description="A broker for forwarding UISP device statistics to Zabbix."
     )
@@ -37,7 +35,7 @@ def main():
     uisp = UISPClient()
 
     if args.dump:
-        print(json.dumps(uisp.get_data_links(), indent=2))
+        print(json.dumps(uisp.get_data_links(filter=True), indent=2))
         return
 
     zapi = ZabbixClient()
@@ -49,34 +47,18 @@ def main():
     while True:
         z_payload = []
         logging.info("Querying UISP for Data Link info...")
-        for l in uisp.get_data_links():
+        for l in uisp.get_data_links(filter=True):
             try:
-                # TODO: For now, this software is only interested in Point to Point links
-                wireless_modes = ("ap-ptp", "sta-ptp")
-                if (
-                    l["from"]["device"]["overview"]["wirelessMode"]
-                    not in wireless_modes
-                    or l["to"]["device"]["overview"]["wirelessMode"]
-                    not in wireless_modes
-                ):
-                    continue
-
-                # If the SSID doesn't exist, bail.
-                if l["ssid"] is None:
-                    continue
-
-                # Trim whitespace
-                host_name = l["ssid"].strip()
-
-                from_stats = Statistics(**l["from"]["interface"]["statistics"])
-                to_stats = Statistics(**l["to"]["interface"]["statistics"])
-                p2p = PointToPoint(host_name, from_stats, to_stats)
+                p2p = DataLink(
+                    l["ssid"].strip(), 
+                    DataLinkStatistics(**l["from"]["interface"]["statistics"]),
+                    DataLinkStatistics(**l["to"]["interface"]["statistics"])
+                )
 
                 # Create the host if it doesn't already exist
                 zapi.get_or_create_host(p2p.ssid)
 
-                payload = json.loads(json.dumps(p2p.__dict__))
-                for k, v in payload.items():
+                for k, v in p2p.stats().items():
                     z_payload.append(SenderData(p2p.ssid, f"uisp2zabbix.p2p.{k}", v))
             except Exception as e:
                 log.exception(f"Got exception processing UISP payload: {e}")

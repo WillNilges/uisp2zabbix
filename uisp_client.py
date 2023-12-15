@@ -38,7 +38,7 @@ class UISPClient:
         history = json.loads(response.content)
         return history
 
-    def get_data_links(self):
+    def get_data_links(self, filter=False):
         response = requests.get(
             f"{self.endpoint}/data-links", headers=self.headers, verify=False
         )
@@ -48,4 +48,27 @@ class UISPClient:
         if data_links == []:
             raise ValueError("Problem downloading UISP data_links.")
 
+        if filter:
+            return self._filter_data_links(data_links)
+
         return data_links
+
+
+    # TODO: For now, this software is only interested in Point to Point links
+    def _filter_data_links(self, data_links):
+        filtered_data_links = []
+        for l in data_links:
+            wireless_modes = ("ap-ptp", "sta-ptp")
+            if (
+                l["from"]["device"]["overview"]["wirelessMode"]
+                not in wireless_modes
+                or l["to"]["device"]["overview"]["wirelessMode"]
+                not in wireless_modes
+            ):
+                continue
+
+            # If the SSID doesn't exist, bail.
+            if l["ssid"] is None:
+                continue
+            filtered_data_links.append(l)
+        return filtered_data_links

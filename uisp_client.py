@@ -53,17 +53,14 @@ class UISPClient:
 
         return data_links
 
-
     # TODO: For now, this software is only interested in Point to Point links
     def _filter_data_links(self, data_links):
         filtered_data_links = []
         for l in data_links:
             wireless_modes = ("ap-ptp", "sta-ptp")
             if (
-                l["from"]["device"]["overview"]["wirelessMode"]
-                not in wireless_modes
-                or l["to"]["device"]["overview"]["wirelessMode"]
-                not in wireless_modes
+                l["from"]["device"]["overview"]["wirelessMode"] not in wireless_modes
+                or l["to"]["device"]["overview"]["wirelessMode"] not in wireless_modes
             ):
                 continue
 

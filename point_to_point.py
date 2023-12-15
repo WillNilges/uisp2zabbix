@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class DataLinkStatistics:
     rxRate: int
@@ -22,6 +23,7 @@ class DataLinkStatistics:
     theoreticalDownlinkCapacity: int
     theoreticalUplinkCapacity: int
 
+
 @dataclass
 class DataLink:
     ssid: str
@@ -38,4 +40,3 @@ class DataLink:
             stats[f"to_{k}"] = v
 
         return stats
-

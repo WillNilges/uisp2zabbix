@@ -45,7 +45,7 @@ class ZabbixClient:
         log.info(f"Logged into zabbix @ {zabbix_url}")
         self._finalizer = weakref.finalize(self, self._cleanup_conn, self.zapi)
 
-        # Set up template group for templates from this app if needed 
+        # Set up template group for templates from this app if needed
         self.default_template_group_id = self.get_or_create_template_group()
 
         # Set up host group for hosts created by this app if needed
@@ -60,7 +60,6 @@ class ZabbixClient:
     def _cleanup_conn(zapi):
         zapi.user.logout()
 
-
     # Queries the Zabbix API to check if a template group by the given name
     # exists, creates one if it doesn't, and returns the ID of that template group
     # Parameters: template_group_name (Name of Template Group) (Optional)
@@ -68,20 +67,23 @@ class ZabbixClient:
     def get_or_create_template_group(self, template_group_name=DEFAULT_TEMPLATE_GROUP):
         try:
             # Check if the template group already exists
-            existing_groups = self.zapi.templategroup.get(filter={"name": template_group_name})
-            
+            existing_groups = self.zapi.templategroup.get(
+                filter={"name": template_group_name}
+            )
+
             if existing_groups:
                 print(f"Template group '{template_group_name}' already exists.")
                 return existing_groups[0]["groupid"]
-            
+
             # Create the template group if it doesn't exist
             created_group = self.zapi.templategroup.create(name=template_group_name)
-            print(f"Template group '{template_group_name}' created with ID: {created_group['groupids'][0]}")
-            return created_group['groupids'][0]
+            print(
+                f"Template group '{template_group_name}' created with ID: {created_group['groupids'][0]}"
+            )
+            return created_group["groupids"][0]
         except ZabbixAPIException as e:
             print(f"Error creating template group: {e}")
             return None
-
 
     # Queries the Zabbix API to check if a host group by the given name
     # exists, creates one if it doesn't, and returns the ID of that host group
@@ -91,37 +93,89 @@ class ZabbixClient:
         try:
             # Check if the host group already exists
             existing_groups = self.zapi.hostgroup.get(filter={"name": host_group_name})
-            
+
             if existing_groups:
                 print(f"host group '{host_group_name}' already exists.")
                 return existing_groups[0]["groupid"]
-            
+
             # Create the host group if it doesn't exist
             created_group = self.zapi.hostgroup.create(name=host_group_name)
-            print(f"host group '{host_group_name}' created with ID: {created_group['groupids'][0]}")
-            return created_group['groupids'][0]
+            print(
+                f"host group '{host_group_name}' created with ID: {created_group['groupids'][0]}"
+            )
+            return created_group["groupids"][0]
         except ZabbixAPIException as e:
             print(f"Error creating host group: {e}")
             return None
-
 
     # Queries the Zabbix API to check if a template by the given name
     # exists, creates one if it doesn't, and returns the ID of that template
     # Parameters: template_name (Name of template)
     # Returns: template_id (ID of template)
-    def get_or_create_template(self, template_name, template_group_id=self.default_template_group_id):
-        pass
+    def get_or_create_template(
+        self, template_name, template_group_id=self.default_template_group_id
+    ):
+        try:
+            # Check if the template exists
+            template = self.zapi.template.get(filter={"host": template_name})
+            if template:
+                return template[0]["templateid"]
 
+            # If not, create it
+            template = self.zapi.template.create(
+                {"host": template_name, "groups": [{"groupid": template_group_id}]}
+            )
+            print(
+                f"Template '{template_name}' created with ID {template['templateids'][0]}"
+            )
+            return template["templateids"][0]
+
+        except ZabbixAPIException as e:
+            print(f"Error getting template: {e}")
+            return None
 
     # Queries the Zabbix API to check if a item by the given name
     # exists, creates one if it doesn't, and returns the ID of that item
     # Parameters: item_name (Name of item), key, info_type, unit
     # Returns: item_id (ID of item)
-    def get_or_create_item(self, name, key, value_type, unit):
-        pass
+    def get_or_create_template_item(self, template_id, name, key, value_type, unit):
+        log.info(f"Creating {key}")
 
+        try:
+            # Check if the item exists
+            item = self.zapi.item.get(filter={"key_": key}, templateids=[template_id])
 
-    def get_or_create_host(self, host_name, template_id, host_group_id=self.default_host_group_id):
+            if item:
+                item_info = item[0]
+                log.info(
+                    f"Item found: {item_info['name']} (Item ID: {item_info['itemid']}, Key: {item_info['key_']})"
+                )
+                return item_info["itemid"]
+
+            # If not, create it
+            log.info(f"Item with key '{key}' not found.")
+
+            # Create trapper item
+            item_params = {
+                "name": name,
+                "key_": key,
+                "type": TRAPPER,
+                "value_type": value_type,
+                "hostid": template_id,
+                "units": unit,
+            }
+
+            item_id = self.zapi.item.create(params=item_params)["itemids"][0]
+            log.info(
+                f"Trapper item '{name}' created successfully with item ID {item_id}"
+            )
+        except ZabbixAPIException as e:
+            log.exception(f"Error: {e}")
+            return None
+
+    def get_or_create_host(
+        self, host_name, template_id, host_group_id=self.default_host_group_id
+    ):
         # Check our cache for the host
         if host_name in self.host_cache.keys():
             host_id = self.host_cache[host_name]

@@ -13,10 +13,9 @@ from zappix.protocol import SenderData
 if not os.path.exists("./log"):
     os.mkdir("./log")
 
-logging.basicConfig(
-    encoding="utf-8", level=logging.INFO
-)
+logging.basicConfig(encoding="utf-8", level=logging.INFO)
 log = logging.getLogger("UISP2Zabbix")
+
 
 def main():
     parser = ArgumentParser(
@@ -38,7 +37,7 @@ def main():
         print(json.dumps(uisp.get_data_links(filter=True), indent=2))
         return
 
-    # For talking to the Zabbix API. Also creates Default Template Group and 
+    # For talking to the Zabbix API. Also creates Default Template Group and
     # Default Host Group
     zapi = ZabbixClient()
     # Set up template for DataLinks (if needed)
@@ -56,9 +55,9 @@ def main():
         for l in uisp.get_data_links(filter=True):
             try:
                 p2p = DataLink(
-                    l["ssid"].strip(), 
+                    l["ssid"].strip(),
                     DataLinkStatistics(**l["from"]["interface"]["statistics"]),
-                    DataLinkStatistics(**l["to"]["interface"]["statistics"])
+                    DataLinkStatistics(**l["to"]["interface"]["statistics"]),
                 )
 
                 # Create the host if it doesn't already exist

@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+import dataclasses
 import logging
 import os
 import time
@@ -6,7 +7,7 @@ import json
 from dotenv import load_dotenv
 from point_to_point import DataLinkStatistics, DataLink
 from uisp_client import UISPClient
-from zabbix_client import ZabbixClient
+from zabbix_client import NUMERIC_FLOAT, NUMERIC_UNSIGNED, TEXT, ZabbixClient
 from zappix.sender import Sender
 from zappix.protocol import SenderData
 
@@ -41,7 +42,22 @@ def main():
     # Default Host Group
     zapi = ZabbixClient()
     # Set up template for DataLinks (if needed)
-    datalink_template_id = zapi.get_or_create_template(DataLink.__name__)
+    datalink_template_id, created = zapi.get_or_create_template(DataLink)
+    if True: #created:
+        # Set up the items in the new template
+        for field in dataclasses.fields(DataLinkStatistics):
+            if field.type == float or field.type == int:
+                t = NUMERIC_FLOAT
+                if "signal" in field.name:
+                    u = "dB"
+                if "Rate" in field.name or "Capacity" in field.name:
+                    u = "bps"  # TODO: Is this bps or Kbps?
+            else:
+                t = TEXT
+                u = None
+            zapi.get_or_create_template_item(
+                datalink_template_id, f"from_{field.name}", f"from_{field.name}", t, u
+            )
 
     # For pushing data to Zabbix (doing the actual broker-ing)
     z_endpoint = os.getenv("ZABBIX_ENDPOINT")

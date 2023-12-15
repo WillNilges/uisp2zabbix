@@ -112,14 +112,15 @@ class ZabbixClient:
     # exists, creates one if it doesn't, and returns the ID of that template
     # Parameters: template_name (Name of template)
     # Returns: template_id (ID of template)
-    def get_or_create_template(
-        self, template_name, template_group_id=self.default_template_group_id
-    ):
+    def get_or_create_template(self, data_class, template_group_id=None):
+        if template_group_id is None:
+            template_group_id = self.default_template_group_id
+        template_name = f"{data_class.__name__} by UISPZabbix"
         try:
             # Check if the template exists
             template = self.zapi.template.get(filter={"host": template_name})
             if template:
-                return template[0]["templateid"]
+                return (template[0]["templateid"], False)
 
             # If not, create it
             template = self.zapi.template.create(
@@ -128,17 +129,19 @@ class ZabbixClient:
             print(
                 f"Template '{template_name}' created with ID {template['templateids'][0]}"
             )
-            return template["templateids"][0]
+            return (template["templateids"][0], True)
 
         except ZabbixAPIException as e:
             print(f"Error getting template: {e}")
-            return None
+            return (None, False)
 
     # Queries the Zabbix API to check if a item by the given name
     # exists, creates one if it doesn't, and returns the ID of that item
     # Parameters: item_name (Name of item), key, info_type, unit
     # Returns: item_id (ID of item)
-    def get_or_create_template_item(self, template_id, name, key, value_type, unit):
+    def get_or_create_template_item(
+        self, template_id, name, key, value_type, unit=None
+    ):
         log.info(f"Creating {key}")
 
         try:
@@ -155,17 +158,19 @@ class ZabbixClient:
             # If not, create it
             log.info(f"Item with key '{key}' not found.")
 
-            # Create trapper item
-            item_params = {
-                "name": name,
-                "key_": key,
-                "type": TRAPPER,
-                "value_type": value_type,
-                "hostid": template_id,
-                "units": unit,
-            }
+            if unit is None:
+                unit = ""
 
-            item_id = self.zapi.item.create(params=item_params)["itemids"][0]
+            # Create trapper item
+            item_id = self.zapi.item.create(
+                name=name,
+                key_ = key,
+                hostid = template_id,
+                type = TRAPPER,
+                value_type = value_type,
+                units = unit,
+            )["itemids"][0]
+
             log.info(
                 f"Trapper item '{name}' created successfully with item ID {item_id}"
             )
@@ -173,9 +178,10 @@ class ZabbixClient:
             log.exception(f"Error: {e}")
             return None
 
-    def get_or_create_host(
-        self, host_name, template_id, host_group_id=self.default_host_group_id
-    ):
+    def get_or_create_host(self, host_name, template_id, host_group_id=None):
+        if host_group_id is None:
+            host_group_id = self.default_host_group_id
+
         # Check our cache for the host
         if host_name in self.host_cache.keys():
             host_id = self.host_cache[host_name]

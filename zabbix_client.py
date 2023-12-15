@@ -140,9 +140,12 @@ class ZabbixClient:
     # Parameters: item_name (Name of item), key, info_type, unit
     # Returns: item_id (ID of item)
     def get_or_create_template_item(
-        self, template_id, name, key, value_type, unit=None
+        self, template_id, name, key, value_type, unit=None, update=False
     ):
         log.info(f"Creating {key}")
+
+        if unit is None:
+            unit = ""
 
         try:
             # Check if the item exists
@@ -153,27 +156,39 @@ class ZabbixClient:
                 log.info(
                     f"Item found: {item_info['name']} (Item ID: {item_info['itemid']}, Key: {item_info['key_']})"
                 )
+                if update:
+                    self.zapi.item.update(
+                        itemid=item_info["itemid"],
+                        name=name,
+                        key_=key,
+                        # hostid = template_id,
+                        type=TRAPPER,
+                        value_type=value_type,
+                        units=unit,
+                    )["itemids"][0]
+
+                    log.info(
+                        f"Item '{name}' updated successfully with item ID {item_info['itemid']}"
+                    )
+
                 return item_info["itemid"]
 
             # If not, create it
             log.info(f"Item with key '{key}' not found.")
 
-            if unit is None:
-                unit = ""
-
             # Create trapper item
             item_id = self.zapi.item.create(
                 name=name,
-                key_ = key,
-                hostid = template_id,
-                type = TRAPPER,
-                value_type = value_type,
-                units = unit,
+                key_=key,
+                hostid=template_id,
+                type=TRAPPER,
+                value_type=value_type,
+                units=unit,
             )["itemids"][0]
 
-            log.info(
-                f"Trapper item '{name}' created successfully with item ID {item_id}"
-            )
+            log.info(f"Item '{key}' created successfully with item ID {item_id}")
+
+            return item_id
         except ZabbixAPIException as e:
             log.exception(f"Error: {e}")
             return None

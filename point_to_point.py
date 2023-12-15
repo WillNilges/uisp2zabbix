@@ -29,6 +29,7 @@ class DataLink:
     ssid: str
     from_stats: DataLinkStatistics
     to_stats: DataLinkStatistics
+    prefix = "uisp2zabbix.p2p"
 
     def stats(self):
         stats = {}

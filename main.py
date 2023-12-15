@@ -43,21 +43,30 @@ def main():
     zapi = ZabbixClient()
     # Set up template for DataLinks (if needed)
     datalink_template_id, created = zapi.get_or_create_template(DataLink)
-    if True: #created:
+    if True:  # created:
         # Set up the items in the new template
         for field in dataclasses.fields(DataLinkStatistics):
             if field.type == float or field.type == int:
                 t = NUMERIC_FLOAT
                 if "signal" in field.name:
                     u = "dB"
-                if "Rate" in field.name or "Capacity" in field.name:
+                elif "Rate" in field.name or "Capacity" in field.name:
                     u = "bps"  # TODO: Is this bps or Kbps?
+                else:
+                    u = None
             else:
                 t = TEXT
                 u = None
-            zapi.get_or_create_template_item(
-                datalink_template_id, f"from_{field.name}", f"from_{field.name}", t, u
-            )
+
+            for direction in ["from", "to"]:
+                zapi.get_or_create_template_item(
+                    datalink_template_id,
+                    f"{direction}_{field.name}",
+                    f"{DataLink.prefix}.{direction}_{field.name}",
+                    t,
+                    u,
+                    update=True,
+                )
 
     # For pushing data to Zabbix (doing the actual broker-ing)
     z_endpoint = os.getenv("ZABBIX_ENDPOINT")
@@ -80,7 +89,7 @@ def main():
                 zapi.get_or_create_host(p2p.ssid, datalink_template_id)
 
                 for k, v in p2p.stats().items():
-                    z_payload.append(SenderData(p2p.ssid, f"uisp2zabbix.p2p.{k}", v))
+                    z_payload.append(SenderData(p2p.ssid, f"{DataLink.prefix}.{k}", v))
             except Exception as e:
                 log.exception(f"Got exception processing UISP payload: {e}")
 

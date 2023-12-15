@@ -6,8 +6,6 @@ from enum import Enum
 
 from pyzabbix.api import ZabbixAPIException
 
-from point_to_point import DataLink
-
 SNMP_AGENT = 20
 TRAPPER = 2
 
@@ -55,6 +53,7 @@ class ZabbixClient:
 
         # For caching hosts
         self.host_cache = {}
+        self.template_cache = {}
 
     @staticmethod
     def _cleanup_conn(zapi):
@@ -116,10 +115,20 @@ class ZabbixClient:
         if template_group_id is None:
             template_group_id = self.default_template_group_id
         template_name = f"{data_class.__name__} by UISPZabbix"
+
+        # Check our cache for the template
+        if template_name in self.template_cache.keys():
+            template_id = self.template_cache[template_name]
+            log.info(f"Found Template '{template_name}' with ID {template_id} in cache")
+            return (template_id, False)
+
         try:
             # Check if the template exists
             template = self.zapi.template.get(filter={"host": template_name})
             if template:
+                log.info(
+                    f"Found Template '{template_name}' with ID {template[0]['templateid']}"
+                )
                 return (template[0]["templateid"], False)
 
             # If not, create it

@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+import dataclasses
+
+from zabbix_client import NUMERIC_FLOAT, TEXT
 
 
 @dataclass
@@ -41,3 +44,29 @@ class DataLink:
             stats[f"to_{k}"] = v
 
         return stats
+
+
+def build_datalink_template(zapi, datalink_template_id):
+    # Set up the items in the new template
+    for field in dataclasses.fields(DataLinkStatistics):
+        if field.type == float or field.type == int:
+            t = NUMERIC_FLOAT
+            if "signal" in field.name:
+                u = "dB"
+            elif "Rate" in field.name or "Capacity" in field.name:
+                u = "bps"  # TODO: Is this bps or Kbps?
+            else:
+                u = None
+        else:
+            t = TEXT
+            u = None
+
+        for direction in ["from", "to"]:
+            zapi.get_or_create_template_item(
+                datalink_template_id,
+                f"{direction}_{field.name}",
+                f"{DataLink.prefix}.{direction}_{field.name}",
+                t,
+                u,
+                update=True,
+            )

@@ -5,7 +5,7 @@ import os
 import time
 import json
 from dotenv import load_dotenv
-from point_to_point import DataLinkStatistics, DataLink
+from point_to_point import DataLinkStatistics, DataLink, build_datalink_template
 from uisp_client import UISPClient
 from zabbix_client import NUMERIC_FLOAT, NUMERIC_UNSIGNED, TEXT, ZabbixClient
 from zappix.sender import Sender
@@ -29,6 +29,12 @@ def main():
         help="Dump one frame of UISP data to stdout and exit",
     )
 
+    parser.add_argument(
+        "--update-template",
+        action="store_true",
+        help="Force updating the items within a template",
+    )
+
     args = parser.parse_args()
 
     load_dotenv()
@@ -41,32 +47,11 @@ def main():
     # For talking to the Zabbix API. Also creates Default Template Group and
     # Default Host Group
     zapi = ZabbixClient()
+
     # Set up template for DataLinks (if needed)
     datalink_template_id, created = zapi.get_or_create_template(DataLink)
-    if True:  # created:
-        # Set up the items in the new template
-        for field in dataclasses.fields(DataLinkStatistics):
-            if field.type == float or field.type == int:
-                t = NUMERIC_FLOAT
-                if "signal" in field.name:
-                    u = "dB"
-                elif "Rate" in field.name or "Capacity" in field.name:
-                    u = "bps"  # TODO: Is this bps or Kbps?
-                else:
-                    u = None
-            else:
-                t = TEXT
-                u = None
-
-            for direction in ["from", "to"]:
-                zapi.get_or_create_template_item(
-                    datalink_template_id,
-                    f"{direction}_{field.name}",
-                    f"{DataLink.prefix}.{direction}_{field.name}",
-                    t,
-                    u,
-                    update=True,
-                )
+    if created or args.update_template:
+        build_datalink_template(zapi, datalink_template_id)
 
     # For pushing data to Zabbix (doing the actual broker-ing)
     z_endpoint = os.getenv("ZABBIX_ENDPOINT")

@@ -20,6 +20,7 @@ class HostProto(Protocol):
     def build_template():
         ...
 
+
 # TODO: One day, I bet that I'll realize that all of these classes can
 # be used for any UISP object. I think that Stats, plus Identification,
 # plus a couple other things will equal a Site, and then a DataLink
@@ -31,6 +32,7 @@ class HostProto(Protocol):
 
 # I'd like to actually try adding some other thing before committing to it, though.
 # Becuase there's a pretty high chance we might not care. Maybe if we add routers.
+
 
 @dataclass
 class DataLinkStatistics:
@@ -54,16 +56,18 @@ class DataLinkStatistics:
     theoreticalDownlinkCapacity: int
     theoreticalUplinkCapacity: int
 
+
 @dataclass
 class DataLinkDeviceID:
     id: str
     name: str
-    displayName: str 
-    model: str 
+    displayName: str
+    model: str
     type: str
     category: str
     role: str
     authorized: bool
+
 
 class DataLink(HostProto):
     name: str
@@ -75,10 +79,7 @@ class DataLink(HostProto):
     # Manually define a Link
     def __init__(self, name, from_site, to_site, from_stats, to_stats):
         self.name = name
-        self.tags = {
-            "from": from_site,
-            "to": to_site
-        }
+        self.tags = {"from": from_site, "to": to_site}
         self.from_stats = from_stats
         self.to_stats = to_stats
 
@@ -91,7 +92,9 @@ class DataLink(HostProto):
             "from_dev": link_json["from"]["device"]["identification"]["model"],
             "to_dev": link_json["to"]["device"]["identification"]["model"],
         }
-        self.from_stats = DataLinkStatistics(**link_json["from"]["interface"]["statistics"])
+        self.from_stats = DataLinkStatistics(
+            **link_json["from"]["interface"]["statistics"]
+        )
         self.to_stats = DataLinkStatistics(**link_json["to"]["interface"]["statistics"])
 
     def stats(self):

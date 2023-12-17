@@ -81,7 +81,9 @@ def main():
                 p2p = DataLink(l)
 
                 # Create the host if it doesn't already exist
-                zapi.get_or_create_host(p2p, datalink_template_id, update=args.update_hosts)
+                zapi.get_or_create_host(
+                    p2p, datalink_template_id, update=args.update_hosts
+                )
 
                 for k, v in p2p.stats().items():
                     z_payload.append(SenderData(p2p.name, f"{DataLink.prefix}.{k}", v))

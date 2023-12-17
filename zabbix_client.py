@@ -252,7 +252,7 @@ class ZabbixClient:
                 "name": host_name,
                 "groups": [{"groupid": host_group_id}],
                 "templates": [{"templateid": template_id}],
-                "tags": [host_tags],
+                "tags": host_tags,
             }
 
             host_info = self.zapi.host.create(host_create_params)

@@ -30,7 +30,7 @@ def main():
     )
 
     parser.add_argument(
-        "--update-template",
+        "--update-templates",
         action="store_true",
         help="Force updating the items within a template",
     )
@@ -56,7 +56,7 @@ def main():
 
     # Set up template for DataLinks (if needed)
     datalink_template_id, created = zapi.get_or_create_template(DataLink)
-    if created or args.update_template:
+    if created or args.update_templates:
         for item in DataLink.build_template():
             zapi.get_or_create_template_item(
                 datalink_template_id,
@@ -101,6 +101,8 @@ def main():
                 logging.error("Sleeping for 3 seconds and trying again.")
                 time.sleep(3)
 
+        if args.update_hosts or args.update_templates:
+            return
         # Sleep until it's time to gather more data
         sleep_duration = os.getenv("SLEEP_DURATION", default=10)
         log.info(f"Sleeping for {sleep_duration}s...")

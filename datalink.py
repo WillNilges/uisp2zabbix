@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import dataclasses
 from typing import Protocol
 
-from zabbix_client import NUMERIC_FLOAT, TEXT, TemplateItem
+from zabbix_client import NUMERIC_FLOAT, NUMERIC_UNSIGNED, TEXT, TemplateItem
 
 
 class HostProto(Protocol):
@@ -72,20 +72,17 @@ class DataLinkDeviceID:
 class DataLink(HostProto):
     name: str
     tags: dict
+    signal: int
+    frequency: int
     from_stats: DataLinkStatistics
     to_stats: DataLinkStatistics
     prefix = "uisp2zabbix.p2p"
 
-    # Manually define a Link
-    def __init__(self, name, from_site, to_site, from_stats, to_stats):
-        self.name = name
-        self.tags = {"from": from_site, "to": to_site}
-        self.from_stats = from_stats
-        self.to_stats = to_stats
-
-    # Or just use the JSON blob :)
+    # Use the JSON blob to set up the DataLink object
     def __init__(self, link_json):
         self.name = link_json["ssid"].strip()
+        self.signal = link_json["signal"]
+        self.frequency = link_json["frequency"]
         self.tags = {
             "from": link_json["from"]["site"]["identification"]["name"],
             "to": link_json["to"]["site"]["identification"]["name"],
@@ -99,10 +96,20 @@ class DataLink(HostProto):
 
     def stats(self):
         stats = {}
+        
+        # Send top-level signal number
+        stats["signal"] = self.signal
 
+        # Send top-level frequency, multiplied by a million
+        # to get it into Hz so that Zabbix's units work without
+        # pre-processing.
+        stats["frequency"] = self.frequency * 1000000
+
+        # Send from stats
         for k, v in self.from_stats.__dict__.items():
             stats[f"from_{k}"] = v
 
+        # Send to stats
         for k, v in self.to_stats.__dict__.items():
             stats[f"to_{k}"] = v
 
@@ -112,6 +119,27 @@ class DataLink(HostProto):
     def build_template():
         # Set up the items in the new template
         items = []
+
+        # Add an item for overall signal (provided in the blob)
+        items.append(
+            TemplateItem(
+                "signal",
+                f"{DataLink.prefix}.signal",
+                NUMERIC_FLOAT,
+                "dB",
+            )
+        )
+
+        # Add an item for frequency (provided in the blob)
+        items.append(
+            TemplateItem(
+                "frequency",
+                f"{DataLink.prefix}.frequency",
+                NUMERIC_UNSIGNED,
+                "Hz",
+            )
+        )
+
         for field in dataclasses.fields(DataLinkStatistics):
             if field.type == float or field.type == int:
                 t = NUMERIC_FLOAT

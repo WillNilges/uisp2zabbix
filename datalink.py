@@ -20,6 +20,17 @@ class HostProto(Protocol):
     def build_template():
         ...
 
+# TODO: One day, I bet that I'll realize that all of these classes can
+# be used for any UISP object. I think that Stats, plus Identification,
+# plus a couple other things will equal a Site, and then a DataLink
+# can be two Sites.
+
+# It is already becoming the case that the names of these classes
+# aren't really super accurate. a Site is just a way to refer to half of a
+# DataLink, among other things.
+
+# I'd like to actually try adding some other thing before committing to it, though.
+# Becuase there's a pretty high chance we might not care. Maybe if we add routers.
 
 @dataclass
 class DataLinkStatistics:
@@ -43,6 +54,16 @@ class DataLinkStatistics:
     theoreticalDownlinkCapacity: int
     theoreticalUplinkCapacity: int
 
+@dataclass
+class DataLinkDeviceID:
+    id: str
+    name: str
+    displayName: str 
+    model: str 
+    type: str
+    category: str
+    role: str
+    authorized: bool
 
 class DataLink(HostProto):
     name: str

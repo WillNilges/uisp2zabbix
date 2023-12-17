@@ -72,11 +72,27 @@ class DataLink(HostProto):
     to_stats: DataLinkStatistics
     prefix = "uisp2zabbix.p2p"
 
+    # Manually define a Link
     def __init__(self, name, from_site, to_site, from_stats, to_stats):
         self.name = name
-        self.tags = {"from": from_site, "to": to_site}
+        self.tags = {
+            "from": from_site,
+            "to": to_site
+        }
         self.from_stats = from_stats
         self.to_stats = to_stats
+
+    # Or just use the JSON blob :)
+    def __init__(self, link_json):
+        self.name = link_json["ssid"].strip()
+        self.tags = {
+            "from": link_json["from"]["site"]["identification"]["name"],
+            "to": link_json["to"]["site"]["identification"]["name"],
+            "from_dev": link_json["from"]["device"]["identification"]["model"],
+            "to_dev": link_json["to"]["device"]["identification"]["model"],
+        }
+        self.from_stats = DataLinkStatistics(**link_json["from"]["interface"]["statistics"])
+        self.to_stats = DataLinkStatistics(**link_json["to"]["interface"]["statistics"])
 
     def stats(self):
         stats = {}

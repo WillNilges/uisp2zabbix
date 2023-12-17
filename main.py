@@ -78,13 +78,7 @@ def main():
         logging.info("Querying UISP for Data Link info...")
         for l in uisp.get_data_links(filter=True):
             try:
-                p2p = DataLink(
-                    l["ssid"].strip(),
-                    l["from"]["site"]["identification"]["name"],
-                    l["to"]["site"]["identification"]["name"],
-                    DataLinkStatistics(**l["from"]["interface"]["statistics"]),
-                    DataLinkStatistics(**l["to"]["interface"]["statistics"]),
-                )
+                p2p = DataLink(l)
 
                 # Create the host if it doesn't already exist
                 zapi.get_or_create_host(p2p, datalink_template_id, update=args.update_hosts)

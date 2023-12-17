@@ -5,9 +5,9 @@ import os
 import time
 import json
 from dotenv import load_dotenv
-from point_to_point import DataLinkStatistics, DataLink, build_datalink_template
+from datalink import DataLinkStatistics, DataLink
 from uisp_client import UISPClient
-from zabbix_client import NUMERIC_FLOAT, NUMERIC_UNSIGNED, TEXT, ZabbixClient
+from zabbix_client import ZabbixClient
 from zappix.sender import Sender
 from zappix.protocol import SenderData
 
@@ -35,6 +35,12 @@ def main():
         help="Force updating the items within a template",
     )
 
+    parser.add_argument(
+        "--update-hosts",
+        action="store_true",
+        help="Force updating hosts",
+    )
+
     args = parser.parse_args()
 
     load_dotenv()
@@ -51,7 +57,15 @@ def main():
     # Set up template for DataLinks (if needed)
     datalink_template_id, created = zapi.get_or_create_template(DataLink)
     if created or args.update_template:
-        build_datalink_template(zapi, datalink_template_id)
+        for item in DataLink.build_template():
+            zapi.get_or_create_template_item(
+                datalink_template_id,
+                item.name,
+                item.key,
+                item.value_type,
+                item.unit,
+                update=True,
+            )
 
     # For pushing data to Zabbix (doing the actual broker-ing)
     z_endpoint = os.getenv("ZABBIX_ENDPOINT")
@@ -66,15 +80,17 @@ def main():
             try:
                 p2p = DataLink(
                     l["ssid"].strip(),
+                    l["from"]["site"]["identification"]["name"],
+                    l["to"]["site"]["identification"]["name"],
                     DataLinkStatistics(**l["from"]["interface"]["statistics"]),
                     DataLinkStatistics(**l["to"]["interface"]["statistics"]),
                 )
 
                 # Create the host if it doesn't already exist
-                zapi.get_or_create_host(p2p.ssid, datalink_template_id)
+                zapi.get_or_create_host(p2p, datalink_template_id, update=args.update_hosts)
 
                 for k, v in p2p.stats().items():
-                    z_payload.append(SenderData(p2p.ssid, f"{DataLink.prefix}.{k}", v))
+                    z_payload.append(SenderData(p2p.name, f"{DataLink.prefix}.{k}", v))
             except Exception as e:
                 log.exception(f"Got exception processing UISP payload: {e}")
 

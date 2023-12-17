@@ -5,6 +5,7 @@ import weakref
 from enum import Enum
 
 from pyzabbix.api import ZabbixAPIException
+from zappix.protocol import dataclass
 
 SNMP_AGENT = 20
 TRAPPER = 2
@@ -27,6 +28,14 @@ NUMERIC_UNSIGNED = 3
 TEXT = 4
 
 log = logging.getLogger("UISP2Zabbix")
+
+
+@dataclass
+class TemplateItem:
+    name: str
+    key: str
+    value_type: int
+    unit: str
 
 
 class ZabbixClient:
@@ -202,12 +211,17 @@ class ZabbixClient:
             log.exception(f"Error: {e}")
             return None
 
-    def get_or_create_host(self, host_name, template_id, host_group_id=None):
+    def get_or_create_host(self, host, template_id, host_group_id=None, update=False):
+        host_name = host.name
+        host_tags = []
+        for k, v in host.tags.items():
+            host_tags.append({"tag": k, "value": v})
+
         if host_group_id is None:
             host_group_id = self.default_host_group_id
 
         # Check our cache for the host
-        if host_name in self.host_cache.keys():
+        if not update and host_name in self.host_cache.keys():
             host_id = self.host_cache[host_name]
             log.info(f"Found Host '{host_name}' with ID {host_id} in cache")
             return host_id
@@ -219,6 +233,18 @@ class ZabbixClient:
             # Host already exists, return its ID
             host_id = existing_host[0]["hostid"]
             log.info(f"Host '{host_name}' already exists with ID {host_id}")
+            if update:
+                host_update_params = {
+                    "hostid": host_id,
+                    "name": host_name,
+                    "groups": [{"groupid": host_group_id}],
+                    "templates": [{"templateid": template_id}],
+                    "tags": host_tags,
+                }
+
+                host_info = self.zapi.host.update(host_update_params)
+                host_id = host_info["hostids"][0]
+                log.info(f"Host '{host_name}' updated with ID {host_id}")
         else:
             # Host doesn't exist, create it
             host_create_params = {
@@ -226,6 +252,7 @@ class ZabbixClient:
                 "name": host_name,
                 "groups": [{"groupid": host_group_id}],
                 "templates": [{"templateid": template_id}],
+                "tags": [host_tags],
             }
 
             host_info = self.zapi.host.create(host_create_params)
